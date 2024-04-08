@@ -1,165 +1,26 @@
 import Fiber from './Fiber.js';
+import DomUpdater from './DomUpdater.js';
+import StateManager from './StateManager.js';
+import Renderer from './Renderer.js';
+import ElementFactory from './ElementFactory.js';
 
-function createElement(type, props, ...children) {
-  return {
-    type,
-    props: {
-      ...props,
-      children: children.map(child =>
-        typeof child === "object"
-          ? child
-          : createTextElement(child)
-      ),
-    },
-  }
-}
-
-function createTextElement(text) {
-  return {
-    type: "TEXT_ELEMENT",
-    props: {
-      nodeValue: text,
-      children: [],
-    },
-  }
-}
-
-const isEvent = key => key.startsWith("on")
-const isProperty = key =>
-  key !== "children" && !isEvent(key)
-const isNew = (prev, next) => key =>
-  prev[key] !== next[key]
-const isGone = (prev, next) => key => !(key in next)
-
-export function updateDom(dom, prevProps, nextProps) {
-  //Remove old or changed event listeners
-  Object.keys(prevProps)
-    .filter(isEvent)
-    .filter(
-      key =>
-        !(key in nextProps) ||
-        isNew(prevProps, nextProps)(key)
-    )
-    .forEach(name => {
-      const eventType = name
-        .toLowerCase()
-        .substring(2)
-      dom.removeEventListener(
-        eventType,
-        prevProps[name]
-      )
-    })
-
-  // Remove old properties
-  Object.keys(prevProps)
-    .filter(isProperty)
-    .filter(isGone(prevProps, nextProps))
-    .forEach(name => {
-      dom[name] = ""
-    })
-
-  // Set new or changed properties
-  Object.keys(nextProps)
-    .filter(isProperty)
-    .filter(isNew(prevProps, nextProps))
-    .forEach(name => {
-      dom[name] = nextProps[name]
-    })
-
-  // Add event listeners
-  Object.keys(nextProps)
-    .filter(isEvent)
-    .filter(isNew(prevProps, nextProps))
-    .forEach(name => {
-      const eventType = name
-        .toLowerCase()
-        .substring(2)
-      dom.addEventListener(
-        eventType,
-        nextProps[name]
-      )
-    })
-}
-
-function commitRoot() {
-  deletions.forEach(commitWork)
-  commitWork(wipRoot.child)
-  currentRoot = wipRoot
-  wipRoot = null
-}
-
-function commitWork(fiber) {
-  if (!fiber) {
-    return
-  }
-
-  let domParentFiber = fiber.parent
-  while (!domParentFiber.dom) {
-    domParentFiber = domParentFiber.parent
-  }
-  const domParent = domParentFiber.dom
-
-  if (
-    fiber.effectTag === "PLACEMENT" &&
-    fiber.dom != null
-  ) {
-    domParent.appendChild(fiber.dom)
-  } else if (
-    fiber.effectTag === "UPDATE" &&
-    fiber.dom != null
-  ) {
-    updateDom(
-      fiber.dom,
-      fiber.alternate.props,
-      fiber.props
-    )
-  } else if (fiber.effectTag === "DELETION") {
-    commitDeletion(fiber, domParent)
-  }
-
-  commitWork(fiber.child)
-  commitWork(fiber.sibling)
-}
-
-function commitDeletion(fiber, domParent) {
-  if (fiber.dom) {
-    domParent.removeChild(fiber.dom)
-  } else {
-    commitDeletion(fiber.child, domParent)
-  }
-}
-
-function render(element, container) {
-  wipRoot = {
-    dom: container,
-    props: {
-      children: [element],
-    },
-    alternate: currentRoot,
-  }
-  deletions = []
-  nextUnitOfWork = wipRoot
-}
-
-let nextUnitOfWork = null
-let currentRoot = null
-let wipRoot = null
-let deletions = null
+const stateManager = new StateManager();
+const renderer = new Renderer();
 
 function workLoop(deadline) {
   let shouldYield = false
 	console.log(`workLoop called with deadline: ${deadline}`);
-  while (nextUnitOfWork && !shouldYield) {
-	  console.log(`Performing unit of work: ${nextUnitOfWork}`);
-    nextUnitOfWork = performUnitOfWork(
-      nextUnitOfWork
-    )
+  while (stateManager.getNextUnitOfWork && !shouldYield) {
+	  console.log(`Performing unit of work: ${stateManager.getNextUnitOfWork}`);
+    stateManager.setNextUnitOfWork(performUnitOfWork(
+      stateManager.getNextUnitOfWork()
+    ));
     shouldYield = deadline.timeRemaining() < 1
   }
 
-  if (!nextUnitOfWork && wipRoot) {
-	  console.log(`Committing root: ${wipRoot}`);
-    commitRoot()
+  if (!stateManager.getNextUnitOfWork() && stateManager.getWorkInProgressRoot()) {
+	  console.log(`Committing root: ${stateManager.getWorkInProgressRoot()}`);
+    renderer.commitRoot()
   }
 
   requestIdleCallback(workLoop)
@@ -167,7 +28,7 @@ function workLoop(deadline) {
 
 requestIdleCallback(workLoop)
 
-function performUnitOfWork(fiber) {
+export function performUnitOfWork(fiber) {
   const isFunctionComponent =
     fiber.type instanceof Function
   if (isFunctionComponent) {
@@ -191,8 +52,6 @@ let wipFiber = null
 let hookIndex = null
 
 function updateFunctionComponent(fiber) {
-	const hookManager = new HookManager();
-	hookManager.setGlobals(wipRoot, nextUnitOfWork, deletions, currentRoot);
 	wipFiber = fiber
 	hookIndex = 0
 	wipFiber.hooks = []
@@ -221,13 +80,14 @@ function useState(initial) {
 	const setState = action => {
 		console.log(`setState called with action: ${action}`);
     hook.queue.push(action)
-    wipRoot = {
-      dom: currentRoot.dom,
-      props: currentRoot.props,
-      alternate: currentRoot,
+    let wipRoot = {
+      dom: stateManager.getCurrentRoot().dom,
+      props: stateManager.getCurrentRoot().props,
+      alternate: stateManager.getCurrentRoot(),
     }
-    nextUnitOfWork = wipRoot
-    deletions = []
+    stateManager.setWorkInProgressRoot(wipRoot);
+    stateManager.setNextUnitOfWork(wipRoot);
+    stateManager.clearDeletions();
   }
 
   wipFiber.hooks.push(hook)
@@ -282,7 +142,7 @@ function reconcileChildren(wipFiber, elements) {
     }
     if (oldFiber && !sameType) {
       oldFiber.effectTag = "DELETION"
-      deletions.push(oldFiber)
+      stateManager.addDeletions(oldFiber);
     }
 
     if (oldFiber) {
@@ -301,8 +161,8 @@ function reconcileChildren(wipFiber, elements) {
 }
 
 const Didact = {
-  createElement,
-  render,
+  createElement: ElementFactory.createElement,
+  render: renderer.render.bind(renderer),
   useState,
 }
 

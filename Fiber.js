@@ -1,4 +1,4 @@
-import { updateDom } from './Didact.js';
+import DomUpdater from './DomUpdater.js';
 
 export default class Fiber {
 	constructor ({type, props, dom, parent, alternate, effectTag }) {
@@ -18,7 +18,7 @@ export default class Fiber {
 		const dom = this.type === "TEXT_ELEMENT" 
 		? document.createTextNode("")
 		: document.createElement(this.type);
-		updateDom(dom, {}, this.props);
+		DomUpdater.updateDom(dom, {}, this.props);
 
 		return dom;
 	}
