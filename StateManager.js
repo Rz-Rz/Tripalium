@@ -15,6 +15,10 @@ export default class StateManager {
     /** @type {null|Object} The work-in-progress root that's being built. */
     this.wipRoot = null;
 
+    this.wipFiber = null;
+
+    this.hookIndex = 0;
+
     /** @type {Array} Elements that need to be removed from the DOM. */
     this.deletions = [];
 
@@ -23,6 +27,22 @@ export default class StateManager {
 
     /** @type {number} Index of the current hook being processed. */
     this.hookIndex = 0;
+  }
+
+  getHookIndex() {
+    return this.hookIndex;
+  }
+
+  setHookIndex(index) {
+    this.hookIndex = index;
+  }
+
+  getWipFiber() {
+    return this.wipFiber;
+  }
+
+  setWipFiber(fiber) {
+    this.wipFiber = fiber;
   }
 
   /** 
@@ -65,6 +85,7 @@ export default class StateManager {
   getDeletions() {
     return this.deletions;
   }
+
   addDeletions(fiber) {
     this.deletions.push(fiber);
   }
