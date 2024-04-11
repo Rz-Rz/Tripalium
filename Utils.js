@@ -22,6 +22,7 @@ class Utils {
   }
 
   static createDom(fiber) {
+	  console.log("Fiber in createDom: ", fiber);
     const dom =
       fiber.type === "TEXT_ELEMENT"
         ? document.createTextNode("")
@@ -32,6 +33,7 @@ class Utils {
   }
 
   static updateDom(dom, prevProps, nextProps) {
+	  console.log('updateDom called for', dom, 'with nextProps', nextProps);
     // Helpers defined within updateDom for encapsulation
     const isEvent = key => key.startsWith("on");
     const isProperty = key => key !== "children" && !isEvent(key);

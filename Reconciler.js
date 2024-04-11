@@ -35,6 +35,7 @@ export default class Reconciler {
     // wipFiber.hooks = []
     this.stateManager.getWipFiber().hooks = []
     const children = [fiber.type(fiber.props)]
+	  console.log("function component children: ", children);
     this.reconcileChildren(fiber, children);
   }
 
@@ -42,10 +43,12 @@ export default class Reconciler {
     if (!fiber.dom) {
       fiber.dom = Utils.createDom(fiber)
     }
+	  console.log("host component children: ", fiber.props.children);
     this.reconcileChildren(fiber, fiber.props.children)
   }
 
   reconcileChildren(wipFiber, elements) {
+	  elements = elements.flat(); // Ensure all elements are on the same level
     let index = 0
     let oldFiber =
       wipFiber.alternate && wipFiber.alternate.child
@@ -74,6 +77,7 @@ export default class Reconciler {
           alternate: oldFiber,
           effectTag: "UPDATE",
         }
+	      console.log("Update element (sameType): ", element);
       }
       if (element && !sameType) {
         newFiber = {
@@ -84,12 +88,15 @@ export default class Reconciler {
           alternate: null,
           effectTag: "PLACEMENT",
         }
+	      console.log("Placing new element (differentType): ", element);
       }
       if (oldFiber && !sameType) {
         oldFiber.effectTag = "DELETION"
         // console.log('deletion', oldFiber);
         // deletions.push(oldFiber)
         this.stateManager.addDeletions(oldFiber);
+	      console.log("Deleting old element : ", oldFiber);
+	      
       }
 
       if (oldFiber) {
