@@ -33,7 +33,7 @@ export default class Hooks {
             Hooks.stateManager.setWorkInProgressRoot(wipRoot);
             Hooks.stateManager.setNextUnitOfWork(Hooks.stateManager.getWorkInProgressRoot());
             Hooks.stateManager.setDeletions([]);
-        };
+};
 
         Hooks.stateManager.getWipFiber().hooks.push(hook);
         Hooks.stateManager.setHookIndex(Hooks.stateManager.getHookIndex() + 1);
@@ -69,40 +69,42 @@ export default class Hooks {
 
   static useContext(context) {
     const currentFiber = Hooks.stateManager.getWipFiber();
-    console.log('currentFiber', currentFiber);
+    console.log('Context: currentFiber', currentFiber);
     const oldHook = currentFiber.alternate && currentFiber.alternate.hooks && currentFiber.alternate.hooks[Hooks.stateManager.getHookIndex()];
-    console.log('oldHook', oldHook);
+    console.log('Context: oldHook', oldHook);
 
-    const hook = {
-      state: oldHook ? oldHook.state : context._currentValue,
-      queue: [],
-    };
-
-    if (!oldHook) {
-      // Only subscribe the component to the context changes if it's the first render
-      context._subscribers.push(() => {
-        hook.state = context._currentValue;
-        console.log('Context changed', hook.state);
-        // Trigger re-render of the component subscribed to the context
-        let wipRoot = {
+    let hook;
+    if (oldHook) {
+      console.log('Context: oldHook.state', oldHook.state);
+      if (oldHook.cleanup) {
+        oldHook.cleanup();
+      }
+      hook = oldHook;
+    } else {
+      hook = {
+        state: context.value,
+        cleanup: null
+      };
+    }
+    if (context.subscribe && !hook.cleanup) {
+      // Only subscribe if we do not already have a cleanup function (to avoid duplicate subscriptions)
+      console.log('Context: hook', hook);
+      hook.cleanup = context.subscribe(() => {
+        console.log('Context value changed, updating hook state');
+        hook.state = context.value;
+        const wipRoot = {
           dom: Hooks.stateManager.getCurrentRoot().dom,
           props: Hooks.stateManager.getCurrentRoot().props,
           alternate: Hooks.stateManager.getCurrentRoot(),
-          // dom: currentFiber.dom, // Might need adjustment based on your stateManager structure
-          // props: currentFiber.props,
-          // alternate: currentFiber,
         };
-        // console.log('wipRoot', wipRoot);
-        // console.log('currentFiber type ', currentFiber.type);
+        console.log('Context: wipRoot', wipRoot);
         Hooks.stateManager.setWorkInProgressRoot(wipRoot);
         Hooks.stateManager.setNextUnitOfWork(Hooks.stateManager.getWorkInProgressRoot());
         Hooks.stateManager.setDeletions([]);
       });
     }
-
     Hooks.stateManager.getWipFiber().hooks.push(hook);
     Hooks.stateManager.setHookIndex(Hooks.stateManager.getHookIndex() + 1);
-
     return hook.state;
   }
 }
