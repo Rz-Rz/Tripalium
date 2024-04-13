@@ -1,7 +1,7 @@
 import BaseContext from './BaseContext';
 import qs from 'querystringify';
 
-class RoutingContext extends BaseContext {
+export default class RoutingContext extends BaseContext {
   constructor() {
     super({
       path: window.location.pathname,

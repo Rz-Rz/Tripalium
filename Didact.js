@@ -6,6 +6,7 @@ import Hooks from './Hooks';
 import RouterProvider from './RouterProvider';
 import Link from './Link';
 import Route from './Route';
+import RoutingContext from './RoutingContext';
 
 
 let stateManager = new StateManager();
@@ -23,6 +24,7 @@ const Didact = {
 	RouterProvider,
 	Link,
 	Route,
+	RoutingContext,
 }
 
 export default Didact;
