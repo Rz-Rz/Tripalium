@@ -23,25 +23,40 @@ export default class Renderer {
     return Renderer.instance;
   }
 
+  aggressiveIdleCallback(callback, options = { timeout: 100 }) {
+    const tick = () => {
+      const deadline = {
+        didTimeout: false,
+        timeRemaining: () => Infinity
+      };
+      callback(deadline);  // Run the passed workLoop with simulated deadline object
+      setTimeout(() => window.requestAnimationFrame(tick), options.timeout); // Recur at specified timeout
+    };
+
+    window.requestAnimationFrame(tick);
+  }
+
   workLoop(deadline) {
     console.log('workLoop');
-    let shouldYield = false
+    let shouldYield = false;
     while (this.stateManager.getNextUnitOfWork() && !shouldYield) {
-      // nextUnitOfWork = performUnitOfWork(
-        //   nextUnitOfWork
-        // )
       this.stateManager.setNextUnitOfWork(this.reconciler.performUnitOfWork(
         this.stateManager.getNextUnitOfWork()
       ));
-      shouldYield = deadline.timeRemaining() < 1
+      shouldYield = deadline.timeRemaining() <= 1 || deadline.didTimeout;
     }
 
     if (!this.stateManager.getNextUnitOfWork() && this.stateManager.getWorkInProgressRoot()) {
-      this.commitRoot()
+      this.commitRoot();
     }
 
-  window.requestIdleCallback(this.workLoop)
-}
+    // Only schedule new work if there's more to do
+      if (this.stateManager.getNextUnitOfWork()) {
+        this.aggressiveIdleCallback(this.workLoop);
+      } else {
+        console.log("No more work. Idle now.");
+      }
+  }
 
   render(element, container) {
     let wipRoot = {
@@ -57,7 +72,8 @@ export default class Renderer {
     this.stateManager.setDeletions([]);
     // nextUnitOfWork = wipRoot
     this.stateManager.setNextUnitOfWork(this.stateManager.getWorkInProgressRoot());
-    window.requestIdleCallback(this.workLoop)
+    this.aggressiveIdleCallback(this.workLoop)
+    // window.requestIdleCallback(this.workLoop)
   }
 
   commitRoot() {
