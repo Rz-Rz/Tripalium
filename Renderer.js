@@ -24,6 +24,7 @@ export default class Renderer {
   }
 
   workLoop(deadline) {
+    console.log('workLoop');
     let shouldYield = false
     while (this.stateManager.getNextUnitOfWork() && !shouldYield) {
       // nextUnitOfWork = performUnitOfWork(

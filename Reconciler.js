@@ -27,6 +27,7 @@ export default class Reconciler {
   }
 
   updateFunctionComponent(fiber) {
+
     this.stateManager.setWipFiber(fiber);
     // wipFiber = fiber
 
@@ -35,6 +36,7 @@ export default class Reconciler {
     // wipFiber.hooks = []
     this.stateManager.getWipFiber().hooks = []
     const children = [fiber.type(fiber.props)]
+    console.log("function component fiber:", fiber );
 	  // console.log("function component children: ", children);
     this.reconcileChildren(fiber, children);
   }
@@ -44,6 +46,7 @@ export default class Reconciler {
       fiber.dom = Utils.createDom(fiber)
     }
 	  // console.log("host component children: ", fiber.props.children);
+    // console.log("host component dom: ", fiber.dom);
     this.reconcileChildren(fiber, fiber.props.children)
   }
 

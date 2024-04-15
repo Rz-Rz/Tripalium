@@ -6,7 +6,7 @@ import { routingContext } from './RoutingContext';
 export default function Link({ to, children }) {
 	const navigate = (e) => {
 		e.preventDefault();
-		routingContext.navigate(to);
+		routingContext.navigate(to, {}, true);
 	};
 
 	return (

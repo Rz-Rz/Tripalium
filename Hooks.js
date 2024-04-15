@@ -5,40 +5,45 @@ export default class Hooks {
         Hooks.stateManager = stateManagerInstance;
     }
 
-    static useState(initial) {
-        const oldHook = Hooks.stateManager.getWipFiber().alternate &&
-            Hooks.stateManager.getWipFiber().alternate.hooks &&
-            Hooks.stateManager.getWipFiber().alternate.hooks[Hooks.stateManager.getHookIndex()];
+  static getOldHook() {
+    const oldHook = Hooks.stateManager.getWipFiber().alternate &&
+      Hooks.stateManager.getWipFiber().alternate.hooks &&
+      Hooks.stateManager.getWipFiber().alternate.hooks[Hooks.stateManager.getHookIndex()];
+    return oldHook;
+  }
 
-        const hook = {
-            state: oldHook ? oldHook.state : initial,
-            queue: [],
-        };
+  static useState(initial) {
+    const oldHook = Hooks.getOldHook();
 
-        const actions = oldHook ? oldHook.queue : [];
-        actions.forEach(action => {
-            hook.state = action(hook.state);
-        });
+    const hook = {
+      state: oldHook ? oldHook.state : initial,
+      queue: [],
+    };
 
-        const setState = action => {
-          const isActionFunction = typeof action === 'function';
-            hook.queue.push(currentState => {
-                return isActionFunction ? action(currentState) : action;
-            });
-            let wipRoot = {
-                dom: Hooks.stateManager.getCurrentRoot().dom,
-                props: Hooks.stateManager.getCurrentRoot().props,
-                alternate: Hooks.stateManager.getCurrentRoot(),
-            };
-            Hooks.stateManager.setWorkInProgressRoot(wipRoot);
-            Hooks.stateManager.setNextUnitOfWork(Hooks.stateManager.getWorkInProgressRoot());
-            Hooks.stateManager.setDeletions([]);
-};
+    const actions = oldHook ? oldHook.queue : [];
+    actions.forEach(action => {
+      hook.state = action(hook.state);
+    });
 
-        Hooks.stateManager.getWipFiber().hooks.push(hook);
-        Hooks.stateManager.setHookIndex(Hooks.stateManager.getHookIndex() + 1);
-        return [hook.state, setState];
-    }
+    const setState = action => {
+      const isActionFunction = typeof action === 'function';
+      hook.queue.push(currentState => {
+        return isActionFunction ? action(currentState) : action;
+      });
+      let wipRoot = {
+        dom: Hooks.stateManager.getCurrentRoot().dom,
+        props: Hooks.stateManager.getCurrentRoot().props,
+        alternate: Hooks.stateManager.getCurrentRoot(),
+      };
+      Hooks.stateManager.setWorkInProgressRoot(wipRoot);
+      Hooks.stateManager.setNextUnitOfWork(Hooks.stateManager.getWorkInProgressRoot());
+      Hooks.stateManager.setDeletions([]);
+    };
+
+    Hooks.stateManager.getWipFiber().hooks.push(hook);
+    Hooks.stateManager.setHookIndex(Hooks.stateManager.getHookIndex() + 1);
+    return [hook.state, setState];
+  }
 
   static useEffect(effect, deps) {
     const oldHook = Hooks.stateManager.getWipFiber().alternate &&
@@ -69,16 +74,16 @@ export default class Hooks {
 
   static useContext(context) {
     const currentFiber = Hooks.stateManager.getWipFiber();
-    console.log('Context: currentFiber', currentFiber);
+    // console.log('Context: currentFiber', currentFiber);
     const oldHook = currentFiber.alternate && currentFiber.alternate.hooks && currentFiber.alternate.hooks[Hooks.stateManager.getHookIndex()];
-    console.log('Context: oldHook', oldHook);
+    // console.log('Context: oldHook', oldHook);
 
     let hook;
     if (oldHook) {
-      console.log('Context: oldHook.state', oldHook.state);
-      if (oldHook.cleanup) {
-        oldHook.cleanup();
-      }
+      // console.log('Context: oldHook.state', oldHook.state);
+      // if (oldHook.cleanup) {
+      //   oldHook.cleanup();
+      // }
       hook = oldHook;
     } else {
       hook = {
@@ -86,22 +91,33 @@ export default class Hooks {
         cleanup: null
       };
     }
+
+        // Determine if this is a route context
+    const isRouteContext = context.isRouteContext || false;
+
     if (context.subscribe && !hook.cleanup) {
       // Only subscribe if we do not already have a cleanup function (to avoid duplicate subscriptions)
-      console.log('Context: hook', hook);
+      // console.log('Context: hook', hook);
       hook.cleanup = context.subscribe(() => {
-        console.log('Context value changed, updating hook state');
+        // console.log('Context value changed, updating hook state');
         hook.state = context.value;
         const wipRoot = {
           dom: Hooks.stateManager.getCurrentRoot().dom,
           props: Hooks.stateManager.getCurrentRoot().props,
           alternate: Hooks.stateManager.getCurrentRoot(),
         };
-        console.log('Context: wipRoot', wipRoot);
+        // console.log('Context: wipRoot', wipRoot);
         Hooks.stateManager.setWorkInProgressRoot(wipRoot);
         Hooks.stateManager.setNextUnitOfWork(Hooks.stateManager.getWorkInProgressRoot());
         Hooks.stateManager.setDeletions([]);
       });
+      if (isRouteContext) {
+        // For route contexts, modify how cleanup is handled
+        hook.cleanup = () => {
+          // Potentially log or handle the fact that routes do not cleanup in the usual way
+          console.log('Route context cleanup called, no action taken.');
+        };
+      }
     }
     Hooks.stateManager.getWipFiber().hooks.push(hook);
     Hooks.stateManager.setHookIndex(Hooks.stateManager.getHookIndex() + 1);

@@ -19,14 +19,24 @@ export default class RoutingContext extends BaseContext {
     return queryString ? `?${queryString}` : '';
   }
 
-  navigate(path, query = {}) {
-    console.log('Navigating to:', path, query);
+  navigate(path, query = {}, pushState = true) {
     const search = RoutingContext.stringifyQuery(query);
-    window.history.pushState({}, '', `${path}${search}`);
+    console.log('Navigating to:', path, query);
+    if (pushState) {
+      window.history.pushState({}, '', `${path}${search}`);
+    } else {
+      window.history.replaceState({}, '', `${path}${search}`);
+    }
     this.updateValue({ path, query });
   }
+
+  // navigate(path, query = {}) {
+  //   console.log('Navigating to:', path, query);
+  //   const search = RoutingContext.stringifyQuery(query);
+  //   window.history.pushState({}, '', `${path}${search}`);
+  //   this.updateValue({ path, query });
+  // }
 
 }
 
 export const routingContext = new RoutingContext();
-
