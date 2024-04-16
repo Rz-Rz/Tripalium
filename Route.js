@@ -14,6 +14,7 @@ export default function Route({ path, component, exact = false }) {
     // console.log('Match found for path:', path);
     // If there's a match, render the specified component
     // Your library's syntax for rendering a component might differ
+    console.log('Route component : ', component);
     return component();
   } else {
     // If no match, render nothing or an alternative

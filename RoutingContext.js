@@ -29,14 +29,6 @@ export default class RoutingContext extends BaseContext {
     }
     this.updateValue({ path, query });
   }
-
-  // navigate(path, query = {}) {
-  //   console.log('Navigating to:', path, query);
-  //   const search = RoutingContext.stringifyQuery(query);
-  //   window.history.pushState({}, '', `${path}${search}`);
-  //   this.updateValue({ path, query });
-  // }
-
 }
 
 export const routingContext = new RoutingContext();

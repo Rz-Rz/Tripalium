@@ -1,5 +1,5 @@
-import StateManager from './StateManager';
-import Utils from './Utils';
+import StateManager from "./StateManager";
+import Utils from "./Utils";
 
 export default class Renderer {
   static instance;
@@ -16,8 +16,7 @@ export default class Renderer {
   }
 
   static getInstance() {
-    if (!Renderer.instance)
-    {
+    if (!Renderer.instance) {
       Renderer.instance = new Renderer();
     }
     return Renderer.instance;
@@ -27,9 +26,9 @@ export default class Renderer {
     const tick = () => {
       const deadline = {
         didTimeout: false,
-        timeRemaining: () => Infinity
+        timeRemaining: () => Infinity,
       };
-      callback(deadline);  // Run the passed workLoop with simulated deadline object
+      callback(deadline); // Run the passed workLoop with simulated deadline object
       setTimeout(() => window.requestAnimationFrame(tick), options.timeout); // Recur at specified timeout
     };
 
@@ -37,25 +36,30 @@ export default class Renderer {
   }
 
   workLoop(deadline) {
-    console.log('workLoop');
+    console.log("workLoop");
     let shouldYield = false;
     while (this.stateManager.getNextUnitOfWork() && !shouldYield) {
-      this.stateManager.setNextUnitOfWork(this.reconciler.performUnitOfWork(
-        this.stateManager.getNextUnitOfWork()
-      ));
+      this.stateManager.setNextUnitOfWork(
+        this.reconciler.performUnitOfWork(
+          this.stateManager.getNextUnitOfWork(),
+        ),
+      );
       shouldYield = deadline.timeRemaining() <= 1 || deadline.didTimeout;
     }
 
-    if (!this.stateManager.getNextUnitOfWork() && this.stateManager.getWorkInProgressRoot()) {
+    if (
+      !this.stateManager.getNextUnitOfWork() &&
+      this.stateManager.getWorkInProgressRoot()
+    ) {
       this.commitRoot();
     }
 
     // Only schedule new work if there's more to do
-      if (this.stateManager.getNextUnitOfWork()) {
-        this.aggressiveIdleCallback(this.workLoop);
-      } else {
-        console.log("No more work. Idle now.");
-      }
+    if (this.stateManager.getNextUnitOfWork()) {
+      this.aggressiveIdleCallback(this.workLoop);
+    } else {
+      console.log("No more work. Idle now.");
+    }
   }
 
   render(element, container) {
@@ -66,20 +70,22 @@ export default class Renderer {
       },
       // alternate: currentRoot,
       alternate: this.stateManager.getCurrentRoot(),
-    }
+    };
     this.stateManager.setWorkInProgressRoot(wipRoot);
     // deletions = []
     this.stateManager.setDeletions([]);
     // nextUnitOfWork = wipRoot
-    this.stateManager.setNextUnitOfWork(this.stateManager.getWorkInProgressRoot());
-    this.aggressiveIdleCallback(this.workLoop)
+    this.stateManager.setNextUnitOfWork(
+      this.stateManager.getWorkInProgressRoot(),
+    );
+    this.aggressiveIdleCallback(this.workLoop);
     // window.requestIdleCallback(this.workLoop)
   }
 
   commitRoot() {
-    let deletions = this.stateManager.getDeletions()
-    deletions.forEach(this.commitWork)
-    this.commitWork(this.stateManager.getWorkInProgressRoot().child)
+    let deletions = this.stateManager.getDeletions();
+    deletions.forEach(this.commitWork);
+    this.commitWork(this.stateManager.getWorkInProgressRoot().child);
     // currentRoot = wipRoot
     this.stateManager.setCurrentRoot(this.stateManager.getWorkInProgressRoot());
     // wipRoot = null
@@ -88,44 +94,61 @@ export default class Renderer {
 
   commitWork(fiber) {
     if (!fiber) {
-      return
+      return;
     }
 
-    let domParentFiber = fiber.parent
+    let domParentFiber = fiber.parent;
     while (!domParentFiber.dom) {
-      domParentFiber = domParentFiber.parent
+      domParentFiber = domParentFiber.parent;
     }
-    const domParent = domParentFiber.dom
+    const domParent = domParentFiber.dom;
 
-    if (
-      fiber.effectTag === "PLACEMENT" &&
-      fiber.dom != null
-    ) {
-      domParent.appendChild(fiber.dom)
-    } else if (
-      fiber.effectTag === "UPDATE" &&
-      fiber.dom != null
-    ) {
-      Utils.updateDom(
-        fiber.dom,
-        fiber.alternate.props,
-        fiber.props
-      )
+    if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
+      domParent.appendChild(fiber.dom);
+    } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
+      Utils.updateDom(fiber.dom, fiber.alternate.props, fiber.props);
     } else if (fiber.effectTag === "DELETION") {
-      this.commitDeletion(fiber, domParent)
+      this.commitDeletion(fiber, domParent);
     }
-
-    this.commitWork(fiber.child)
-    this.commitWork(fiber.sibling)
+    this.commitWork(fiber.child);
+    this.commitWork(fiber.sibling);
   }
 
   commitDeletion(fiber, domParent) {
-    if (fiber.dom) {
-      // console.log('Removing', fiber.dom)
-      domParent.removeChild(fiber.dom)
+    console.log("commitDeletion fiber", fiber);
+    if (!fiber) {
+      console.error("commitDeletion called with undefined fiber");
+      return;
+    }
+    console.log("fiber parent", fiber.parent);
+    console.log("commitDeletion domParent", domParent);
+
+    // Check if fiber has a DOM node associated with it; if not, recurse on children
+    if (!fiber.dom) {
+      // If fiber has a child, attempt to delete child first
+      if (fiber.child) {
+        this.commitDeletion(fiber.child, domParent);
+      }
+      // This line seems out of place as it attempts to remove an undefined DOM node
+      // domParent.removeChild(fiber.dom);
     } else {
-      this.commitDeletion(fiber.child, domParent)
+      // If fiber has a DOM node, try to remove it from the parent
+      if (domParent && domParent.contains(fiber.dom)) {
+        domParent.removeChild(fiber.dom);
+      } else {
+        console.error(
+          "Attempt to delete a non-child node or domParent is undefined",
+          fiber,
+        );
+      }
+      // Recursively delete children of the current fiber
+      if (fiber.child) {
+        this.commitDeletion(fiber.child, fiber.dom);
+      }
+    }
+    // Continue deletion for sibling nodes
+    if (fiber.sibling) {
+      this.commitDeletion(fiber.sibling, domParent);
     }
   }
-
 }

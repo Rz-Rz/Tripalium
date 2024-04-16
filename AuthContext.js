@@ -1,6 +1,6 @@
-import BaseContext from './BaseContext';
+import BaseContext from "./BaseContext";
 
-class AuthContext extends BaseContext {
+class JwtContext extends BaseContext {
   constructor() {
     super({ jwt: null });
   }
@@ -8,7 +8,17 @@ class AuthContext extends BaseContext {
   setJwt(jwt) {
     this.updateValue({ jwt });
   }
-
 }
 
-export const authContext = new AuthContext();
+class UserContext extends BaseContext {
+  constructor() {
+    super({ user: null });
+  }
+
+  setUser(user) {
+    this.updateValue({ user });
+  }
+}
+
+export const authContext = new JwtContext();
+export const userContext = new UserContext();

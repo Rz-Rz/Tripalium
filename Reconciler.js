@@ -52,6 +52,8 @@ export default class Reconciler {
 
   reconcileChildren(wipFiber, elements) {
 	  elements = elements.flat(); // Ensure all elements are on the same level
+    console.log("reconcileChildren elements: ", elements);
+    elements = elements.filter(el => el !== false && el !== null && el !== undefined);
     let index = 0
     let oldFiber =
       wipFiber.alternate && wipFiber.alternate.child

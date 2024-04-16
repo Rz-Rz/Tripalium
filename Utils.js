@@ -1,17 +1,31 @@
 class Utils {
   static createElement(type, props, ...children) {
-    return {
-      type,
-      props: {
-        ...props,
-        children: children.map(child =>
-          typeof child === "object" ? child : Utils.createTextElement(child)
-        ),
-      },
-    };
+    const processedChildren = children.map(child => {
+      // Directly return null for false boolean values to prevent them from rendering.
+        if (typeof child === "boolean" && !child) {
+          return null;
+        }
+
+      // Return the child as is if it's an object (likely already a React element).
+        if (typeof child === "object") {
+          return child;
+        }
+
+      // For strings or numbers, convert them into text elements.
+        return Utils.createTextElement(child);
+    }).filter(child => child !== null); // Filter out null values to clean up the children array.
+      // Return the element structure with cleaned and processed children.
+      return {
+        type,
+          props: {
+            ...props,
+              children: processedChildren
+          }
+      };
   }
 
   static createTextElement(text) {
+    console.log("createTextElement called with text:", text);
     return {
       type: "TEXT_ELEMENT",
       props: {
