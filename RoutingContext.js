@@ -7,7 +7,9 @@ export default class RoutingContext extends BaseContext {
       path: window.location.pathname,
       query: RoutingContext.parseQuery(window.location.search)
     });
+    this.navigate = this.navigate.bind(this);
     console.log('RoutingContext initialized:', this.value);
+
   }
 
   static parseQuery(search) {

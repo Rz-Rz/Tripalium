@@ -36,7 +36,7 @@ export default class Renderer {
   }
 
   workLoop(deadline) {
-    console.log("workLoop");
+    // console.log("workLoop");
     let shouldYield = false;
     while (this.stateManager.getNextUnitOfWork() && !shouldYield) {
       this.stateManager.setNextUnitOfWork(
@@ -58,7 +58,7 @@ export default class Renderer {
     if (this.stateManager.getNextUnitOfWork()) {
       this.aggressiveIdleCallback(this.workLoop);
     } else {
-      console.log("No more work. Idle now.");
+      // console.log("No more work. Idle now.");
     }
   }
 
@@ -115,40 +115,15 @@ export default class Renderer {
   }
 
   commitDeletion(fiber, domParent) {
-    console.log("commitDeletion fiber", fiber);
-    if (!fiber) {
-      console.error("commitDeletion called with undefined fiber");
-      return;
-    }
-    console.log("fiber parent", fiber.parent);
-    console.log("commitDeletion domParent", domParent);
-
-    // Check if fiber has a DOM node associated with it; if not, recurse on children
-    if (!fiber.dom) {
-      // If fiber has a child, attempt to delete child first
-      if (fiber.child) {
-        this.commitDeletion(fiber.child, domParent);
-      }
-      // This line seems out of place as it attempts to remove an undefined DOM node
-      // domParent.removeChild(fiber.dom);
-    } else {
-      // If fiber has a DOM node, try to remove it from the parent
+    if (fiber.dom) {
+      // If the fiber has a DOM node, remove it from the DOM
       if (domParent && domParent.contains(fiber.dom)) {
         domParent.removeChild(fiber.dom);
-      } else {
-        console.error(
-          "Attempt to delete a non-child node or domParent is undefined",
-          fiber,
-        );
       }
-      // Recursively delete children of the current fiber
-      if (fiber.child) {
-        this.commitDeletion(fiber.child, fiber.dom);
-      }
-    }
-    // Continue deletion for sibling nodes
-    if (fiber.sibling) {
-      this.commitDeletion(fiber.sibling, domParent);
+    } else if (fiber.child) {
+      // If the fiber does not have a DOM node but has a child, recurse on the child
+      this.commitDeletion(fiber.child, domParent);
     }
   }
+
 }
