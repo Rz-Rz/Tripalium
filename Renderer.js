@@ -22,7 +22,7 @@ export default class Renderer {
     return Renderer.instance;
   }
 
-  aggressiveIdleCallback(callback, options = { timeout: 100 }) {
+  aggressiveIdleCallback(callback, options = { timeout: 120 }) {
     const tick = () => {
       const deadline = {
         didTimeout: false,

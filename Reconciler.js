@@ -36,7 +36,7 @@ export default class Reconciler {
     // wipFiber.hooks = []
     this.stateManager.getWipFiber().hooks = []
     const children = [fiber.type(fiber.props)]
-    console.log("function component fiber:", fiber );
+    // console.log("function component fiber:", fiber );
 	  // console.log("function component children: ", children);
     this.reconcileChildren(fiber, children);
   }
@@ -52,7 +52,7 @@ export default class Reconciler {
 
   reconcileChildren(wipFiber, elements) {
 	  elements = elements.flat(); // Ensure all elements are on the same level
-    console.log("reconcileChildren elements: ", elements);
+    // console.log("reconcileChildren elements: ", elements);
     elements = elements.filter(el => el !== false && el !== null && el !== undefined);
     let index = 0
     let oldFiber =

@@ -25,7 +25,7 @@ class Utils {
   }
 
   static createTextElement(text) {
-    console.log("createTextElement called with text:", text);
+    // console.log("createTextElement called with text:", text);
     return {
       type: "TEXT_ELEMENT",
       props: {
