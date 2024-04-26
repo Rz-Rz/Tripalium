@@ -1,5 +1,6 @@
 import StateManager from "./StateManager";
 import Utils from "./Utils";
+import { debugLog } from "./Logs";
 
 export default class Renderer {
   static instance;
@@ -51,6 +52,8 @@ export default class Renderer {
       !this.stateManager.getNextUnitOfWork() &&
       this.stateManager.getWorkInProgressRoot()
     ) {
+      // console.log("WorkLoop: Committing root", this.stateManager.getWorkInProgressRoot());
+      // console.log("WorkLoop: getNextUnitOfWork", this.stateManager.getNextUnitOfWork());
       this.commitRoot();
     }
 
@@ -71,6 +74,7 @@ export default class Renderer {
       // alternate: currentRoot,
       alternate: this.stateManager.getCurrentRoot(),
     };
+    // console.log("setting wipRoot: ", wipRoot);
     this.stateManager.setWorkInProgressRoot(wipRoot);
     // deletions = []
     this.stateManager.setDeletions([]);
@@ -83,8 +87,11 @@ export default class Renderer {
   }
 
   commitRoot() {
+    // console.log("Commit Root");
     let deletions = this.stateManager.getDeletions();
+    // console.log("Deletions: ", deletions);
     deletions.forEach(this.commitWork);
+    // console.log("WIP Root child: ", this.stateManager.getWorkInProgressRoot().child);
     this.commitWork(this.stateManager.getWorkInProgressRoot().child);
     // currentRoot = wipRoot
     this.stateManager.setCurrentRoot(this.stateManager.getWorkInProgressRoot());
@@ -96,7 +103,7 @@ export default class Renderer {
     if (!fiber) {
       return;
     }
-
+    // console.log("Commit Work: ", fiber);
     let domParentFiber = fiber.parent;
     while (!domParentFiber.dom) {
       domParentFiber = domParentFiber.parent;
@@ -105,25 +112,46 @@ export default class Renderer {
 
     if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
       domParent.appendChild(fiber.dom);
+      // console.log("Commit Work: Placement", fiber, "with dom parent", domParent);
     } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
       Utils.updateDom(fiber.dom, fiber.alternate.props, fiber.props);
+      // console.log("Commit Work: Update", fiber, "with dom parent", domParent);
     } else if (fiber.effectTag === "DELETION") {
+      // console.log("Commit Work: Deletion", fiber, "with dom parent", domParent);
       this.commitDeletion(fiber, domParent);
     }
+    // console.log("Commit Work: Recursive Child", fiber.child);
     this.commitWork(fiber.child);
+    // console.log("Commit Work: Recursive Sibling", fiber.sibling);
     this.commitWork(fiber.sibling);
   }
 
   commitDeletion(fiber, domParent) {
+    console.log("Commit Deletion: ", fiber);
+    if (fiber.hooks) {
+      console.log("Commit Deletion: Hooks", fiber.hooks);
+      fiber.hooks.forEach((hook) => {
+        if (hook.cleanup) {
+          hook.cleanup(); // Execute cleanup function if available
+        }
+      });
+    }
+
     if (fiber.dom) {
       // If the fiber has a DOM node, remove it from the DOM
       if (domParent && domParent.contains(fiber.dom)) {
         domParent.removeChild(fiber.dom);
       }
-    } else if (fiber.child) {
+    }
+    // console.log("Commit Deletion: Recursive Child", fiber.child);
+    // debugLog(fiber.chid);
+    if (fiber.sibling) {
+      this.commitDeletion(fiber.sibling);
+    }
+
+    if (fiber.child) {
       // If the fiber does not have a DOM node but has a child, recurse on the child
       this.commitDeletion(fiber.child, domParent);
     }
   }
-
 }

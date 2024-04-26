@@ -38,6 +38,7 @@ export default class Hooks {
         props: Hooks.stateManager.getCurrentRoot().props,
         alternate: Hooks.stateManager.getCurrentRoot(),
       };
+      // console.log("useState: wipRoot", wipRoot);
       Hooks.stateManager.setWorkInProgressRoot(wipRoot);
       Hooks.stateManager.setNextUnitOfWork(
         Hooks.stateManager.getWorkInProgressRoot(),
@@ -51,33 +52,84 @@ export default class Hooks {
   }
 
   static useEffect(effect, deps) {
+    const index = Hooks.stateManager.getHookIndex();
+    const wipFiber = Hooks.stateManager.getWipFiber();
     const oldHook =
-      Hooks.stateManager.getWipFiber().alternate &&
-      Hooks.stateManager.getWipFiber().alternate.hooks &&
-      Hooks.stateManager.getWipFiber().alternate.hooks[
-      Hooks.stateManager.getHookIndex()
-      ];
-    const hook = {
-      deps,
-      effect,
-      cleanup: null,
-    };
+      wipFiber.alternate &&
+      wipFiber.alternate.hooks &&
+      wipFiber.alternate.hooks[index];
+
     if (oldHook) {
+      console.log("useEffect: oldHook", oldHook);
+      console.dir(oldHook);
       const hasChangedDeps = deps
         ? !deps.every((dep, i) => dep === oldHook.deps[i])
         : true;
+      console.log("useEffect: hasChangedDeps");
+      console.dir(hasChangedDeps);
       if (hasChangedDeps) {
         if (oldHook.cleanup) {
+          console.log("useEffect: cleanup", oldHook.cleanup);
           oldHook.cleanup(); // Cleanup the previous effect
         }
-        hook.cleanup = effect(); // Run the effect and store any cleanup function
+        const cleanup = effect(); // Run the effect and store any cleanup function
+        wipFiber.hooks[index] = { deps, effect, cleanup }; // Update the hook with new values
+        console.log("useEffect: cleanup", cleanup);
+      } else {
+        console.log("Deps Not Changed : Skipping cleanup");
+        wipFiber.hooks[index] = oldHook; // Retain the old hook if dependencies haven't changed
       }
     } else {
-      hook.cleanup = effect(); // This is the first run, so there are no old dependencies
+      console.log("First run of useEffect");
+      const cleanup = effect(); // This is the first run
+      wipFiber.hooks[index] = { deps, effect, cleanup }; // Create a new hook
     }
-    Hooks.stateManager.getWipFiber().hooks.push(hook);
-    Hooks.stateManager.setHookIndex(Hooks.stateManager.getHookIndex() + 1);
+    Hooks.stateManager.setHookIndex(index + 1);
   }
+
+  // static useEffect(effect, deps) {
+  //   const oldHook =
+  //     Hooks.stateManager.getWipFiber().alternate &&
+  //     Hooks.stateManager.getWipFiber().alternate.hooks &&
+  //     Hooks.stateManager.getWipFiber().alternate.hooks[
+  //     Hooks.stateManager.getHookIndex()
+  //     ];
+  //   const hook = {
+  //     deps,
+  //     effect,
+  //     cleanup: null,
+  //   };
+  //   if (oldHook) {
+  //     console.log("useEffect: oldHook", oldHook);
+  //     const hasChangedDeps = deps
+  //       ? !deps.every((dep, i) => dep === oldHook.deps[i])
+  //       : true;
+  //     console.log("useEffect: hasChangedDeps");
+  //     console.dir(hasChangedDeps);
+  //     if (hasChangedDeps) {
+  //       console.log("Deps Changed : Running cleanup");
+  //       if (oldHook.cleanup) {
+  //         console.log("useEffect: cleanup", oldHook.cleanup);
+  //         oldHook.cleanup(); // Cleanup the previous effect
+  //       }
+  //       console.log("useEffect: effect" + effect);
+  //       hook.cleanup = effect(); // Run the effect and store any cleanup function
+  //     }
+  //     else {
+  //       console.log("Deps Not Changed : Skipping cleanup");
+  //       hook.cleanup = oldHook.cleanup; // Reuse the cleanup function
+  //     }
+  //   } else {
+  //     console.log("First run of useEffect");
+  //     hook.cleanup = effect(); // This is the first run, so there are no old dependencies
+  //     console.log("useEffect: hook.cleanup", hook.cleanup);
+  //     console.dir(hook.cleanup);
+  //   }
+  //   console.log("useEffect: hook", hook);
+  //   console.dir(hook);
+  //   Hooks.stateManager.getWipFiber().hooks.push(hook);
+  //   Hooks.stateManager.setHookIndex(Hooks.stateManager.getHookIndex() + 1);
+  // }
 
   static useContext(context) {
     const currentFiber = Hooks.stateManager.getWipFiber();
@@ -127,7 +179,7 @@ export default class Hooks {
         // For route contexts, modify how cleanup is handled
         hook.cleanup = () => {
           // Potentially log or handle the fact that routes do not cleanup in the usual way
-          console.log("Route context cleanup called, no action taken.");
+          // console.log("Route context cleanup called, no action taken.");
         };
       }
     }

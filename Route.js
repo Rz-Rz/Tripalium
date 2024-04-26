@@ -10,11 +10,11 @@ export default function Route({ path, component, exact = false }) {
   const match = exact ? route.path === path : route.path.startsWith(path);
   // Exact match vs. startsWith allows for nested routes if exact is false
 
+  console.log('Route component : ', component, ' with path : ', path);
   if (match) {
     // console.log('Match found for path:', path);
     // If there's a match, render the specified component
     // Your library's syntax for rendering a component might differ
-    console.log('Route component : ', component);
     return component();
   } else {
     // If no match, render nothing or an alternative
